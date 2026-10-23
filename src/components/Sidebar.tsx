@@ -1,0 +1,141 @@
+import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import {
+  Activity,
+  Bell,
+  Bot,
+  ChevronDown,
+  ChevronRight,
+  LayoutDashboard,
+  LineChart,
+  LogOut,
+  Network,
+  Package,
+  PlayCircle,
+  Server,
+  Settings,
+  ShieldAlert,
+  Users,
+  Shield,
+  Zap,
+} from 'lucide-react';
+import './Sidebar.css';
+import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
+
+type NavItem = {
+  icon?: any;
+  label: string;
+  path?: string;
+  subItems?: NavItem[];
+};
+
+type NavSection = {
+  label: string;
+  items: NavItem[];
+};
+
+const navSections: NavSection[] = [
+  {
+    label: '',
+    items: [
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+      { icon: Package, label: 'Artifacts', path: '/artifacts' },
+      { icon: Network, label: 'Cluster', path: '/clusters' },
+      { icon: Server, label: 'Hosts', path: '/hosts' },
+      { icon: LineChart, label: 'Monitoring', path: '/monitoring' },
+      { icon: Bell, label: 'Alerts', path: '/alerts' },
+      { icon: Activity, label: 'Activity', path: '/activity' },
+      { icon: ShieldAlert, label: 'Audits', path: '/audit' },
+      { icon: PlayCircle, label: 'Jobs', path: '/jobs' },
+      { icon: Settings, label: 'LDAP', path: '/ldap-settings' },
+      { 
+        icon: Bot, 
+        label: 'AI OPS', 
+        subItems: [
+          { icon: Shield, label: 'VAPT', path: '/ai-ops/vapt' },
+          { icon: Zap, label: 'Automation', path: '/ai-ops/automation' }
+        ]
+      },
+      { icon: Users, label: 'User Management', path: '/user-management' },
+    ],
+  },
+];
+
+export function Sidebar() {
+  const { decodedToken, logout } = useAuth();
+  const { isAdmin } = usePermissions();
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
+    Clusters: true,
+  });
+  const location = useLocation();
+  const displayName = decodedToken?.preferred_username || decodedToken?.name || 'Authenticated';
+
+  const toggleExpand = (label: string) => {
+    setExpandedItems(prev => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  const renderItem = (item: NavItem, depth = 0) => {
+    if (item.subItems) {
+      const isExpanded = expandedItems[item.label];
+      const isActive = item.subItems.some(sub => location.pathname === sub.path || (sub.path && sub.path !== '/' && location.pathname.startsWith(sub.path + '/')));
+
+      return (
+        <div key={item.label} className="nav-item-group">
+          <div
+            className={`nav-item ${isActive ? 'active-parent' : ''}`}
+            style={{ paddingLeft: `${18 + depth * 12}px` }}
+            onClick={() => toggleExpand(item.label)}
+          >
+            {item.icon && <item.icon size={15} className="nav-item-icon" />}
+            <span style={{ flex: 1 }}>{item.label}</span>
+            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </div>
+          {isExpanded && (
+            <div className="nav-subitems">
+              {item.subItems.map(sub => renderItem(sub, depth + 1))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <NavLink
+        key={item.label}
+        to={item.path!}
+        end={item.path === '/dashboard'}
+        className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+      >
+        {item.icon && <item.icon size={16} className="nav-item-icon" />}
+        {!item.icon && <span className="nav-item-dot" />}
+        <span>{item.label}</span>
+      </NavLink>
+    );
+  };
+
+  return (
+    <aside className="sidebar">
+      <nav className="sidebar-nav">
+        {navSections.map(section => (
+          <div key={section.label} className="nav-section">
+            {section.label && <span className="nav-section-label">{section.label}</span>}
+            {section.items
+              .filter(item => isAdmin || (item.path !== '/user-management' && item.path !== '/ldap-settings'))
+              .map(item => renderItem(item))}
+          </div>
+        ))}
+      </nav>
+
+      <div className="sidebar-footer">
+        <div className="sidebar-user">
+          <span className="sidebar-version-dot" />
+          <span className="sidebar-user-name" title={displayName}>{displayName}</span>
+        </div>
+        <button className="sidebar-logout" type="button" onClick={() => void logout()} title="Logout">
+          <LogOut size={15} />
+        </button>
+      </div>
+    </aside>
+  );
+}
