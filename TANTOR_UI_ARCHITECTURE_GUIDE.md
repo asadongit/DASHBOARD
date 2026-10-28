@@ -70,12 +70,17 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiTarget = env.VITE_API_PROXY_TARGET || 'http://localhost:8443'
   const artifactTarget = env.VITE_ARTIFACT_PROXY_TARGET || 'http://localhost:8081'
+  const agentMeshTarget = env.VITE_AGENTMESH_URL || 'http://localhost:8000'
 
   return {
     server: {
       proxy: {
         '/api/v1/artifacts': {
           target: artifactTarget,
+          secure: false,
+        },
+        '/api/v1/agentmesh': {
+          target: agentMeshTarget,
           secure: false,
         },
         '/api': {
@@ -91,8 +96,8 @@ Any frontend request directed to `/api/v1/ui/clusters` is forwarded by Vite to `
 
 ### 2. AgentMesh AI-OPS Engine (VAPT & Remediation)
 * **Backend Technology**: FastAPI / Python (located in `Downloads/Backend`).
-* **Target Port**: `http://localhost:8000`.
-* **Communication Route**: Direct HTTP & SSE connection to `http://localhost:8000/api/v1/agentmesh/...`.
+* **Target Port**: Configurable via `VITE_AGENTMESH_URL` (defaults to `http://localhost:8000`).
+* **Communication Route**: Configurable HTTP & SSE connection to `${VITE_AGENTMESH_URL}/api/v1/agentmesh/...` (or proxied via Vite `/api/v1/agentmesh`).
 * **Purpose**: Orchestrates automated security workflows, LLM validation of scan documents, and real-time mitigation execution over SSH.
 
 ---
@@ -477,6 +482,6 @@ The VAPT session is preserved across page refreshes using key-prefixed localStor
 ### Crucial Architectural Rules to Remember
 1. **Never hardcode Keycloak tokens**: Rely on `fetch('/api/...')` — the patched fetch automatically handles token attachment and renewal.
 2. **Use Vite Proxy for Tantor APIs**: Always use relative URLs like `/api/v1/...` so Vite forwards them to `:8443` or `:8081`.
-3. **AgentMesh APIs use Port 8000**: VAPT and Automation endpoints currently hit `http://localhost:8000/api/v1/agentmesh/...`.
+3. **AgentMesh API URL is configurable**: Controlled via `VITE_AGENTMESH_URL` in `.env` (defaults to `http://localhost:8000`).
 4. **Respect RBAC**: Check `const { canManage } = usePermissions();` before showing destructive UI triggers (deleting clusters, restarting nodes, rolling back tasks).
 5. **Handle Long-Running Actions via Polling**: Backend operations return a `taskId` or `jobId`; always poll the task status until it transitions out of `RUNNING` or `QUEUED`.

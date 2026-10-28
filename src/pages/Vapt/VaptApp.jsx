@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Upload, Download, Send, Shield, Plus, MessageSquare, X, RefreshCw, 
-  CheckCircle2, AlertTriangle, FileSpreadsheet, Terminal, 
-  ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight, Copy, Check, Sparkles, Loader2 
+import {
+  Upload, Download, Send, Shield, Plus, MessageSquare, X, RefreshCw,
+  CheckCircle2, AlertTriangle, FileSpreadsheet, Terminal,
+  ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight, Copy, Check, Sparkles, Loader2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -10,8 +10,9 @@ import rehypeRaw from 'rehype-raw';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import './VaptApp.css';
 
-const WORKFLOW_ID = 'c7f3b8a1-4e92-4f15-8d26-9a5c8e3f1b0a';
-const API_BASE = 'http://localhost:8000';
+const WORKFLOW_ID = 'd6213eea-c590-4391-bc05-2eef9eb71ea3';
+const rawAgentMeshUrl = import.meta.env.VITE_AGENTMESH_URL || 'http://localhost:8000';
+const API_BASE = rawAgentMeshUrl.replace(/\/+$/, '').replace(/\/api\/v1\/agentmesh\/?$/, '');
 
 function genThreadId() {
   return 'vapt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
@@ -103,11 +104,11 @@ export default function VaptApp() {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.THREAD_ID);
       if (saved) return saved;
-    } catch (e) {}
+    } catch (e) { }
     const newId = genThreadId();
     try {
       localStorage.setItem(STORAGE_KEYS.THREAD_ID, newId);
-    } catch (e) {}
+    } catch (e) { }
     return newId;
   });
 
@@ -123,7 +124,7 @@ export default function VaptApp() {
   const [uploadStatusText, setUploadStatusText] = useState('');
   const [uploadProgress, setUploadProgress] = useState(null);
   const [nonVaptDialogue, setNonVaptDialogue] = useState(null);
-  
+
   // Dashboard Metrics State (Persisted)
   const [ptsData, setPtsData] = useState(() => {
     return safeGetStorage(STORAGE_KEYS.PTS_DATA, DEFAULT_PTS_DATA);
@@ -157,11 +158,13 @@ export default function VaptApp() {
   const [totalCategoryRecords, setTotalCategoryRecords] = useState(0);
   const [isLoadingPage, setIsLoadingPage] = useState(false);
   const [pageJumpInput, setPageJumpInput] = useState('');
-  
+  // Filter mode for findings table: 'all' | 'needs_review'
+  const [filterMode, setFilterMode] = useState('all');
+
   // Chat & Agent State (Persisted)
   const [messages, setMessages] = useState(() => {
     const saved = safeGetStorage(STORAGE_KEYS.MESSAGES, []);
-    return Array.isArray(saved) 
+    return Array.isArray(saved)
       ? saved.map(m => m.isStreaming ? { ...m, isStreaming: false } : m)
       : [];
   });
@@ -170,7 +173,7 @@ export default function VaptApp() {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.IS_CHAT_OPEN);
       if (saved !== null) return saved === 'true';
-    } catch (e) {}
+    } catch (e) { }
     const savedMsgs = safeGetStorage(STORAGE_KEYS.MESSAGES, []);
     return Array.isArray(savedMsgs) && savedMsgs.length > 0;
   });
@@ -189,7 +192,7 @@ export default function VaptApp() {
     if (threadId) {
       try {
         localStorage.setItem(STORAGE_KEYS.THREAD_ID, threadId);
-      } catch (e) {}
+      } catch (e) { }
     }
   }, [threadId]);
 
@@ -200,7 +203,7 @@ export default function VaptApp() {
       } else {
         localStorage.removeItem(STORAGE_KEYS.UPLOADED_FILE_NAME);
       }
-    } catch (e) {}
+    } catch (e) { }
   }, [uploadedFileName]);
 
   useEffect(() => {
@@ -220,7 +223,7 @@ export default function VaptApp() {
       if (selectedCategory) {
         localStorage.setItem(STORAGE_KEYS.SELECTED_CATEGORY, selectedCategory);
       }
-    } catch (e) {}
+    } catch (e) { }
   }, [selectedCategory]);
 
   useEffect(() => {
@@ -230,7 +233,7 @@ export default function VaptApp() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.IS_CHAT_OPEN, String(isChatOpen));
-    } catch (e) {}
+    } catch (e) { }
   }, [isChatOpen]);
 
   useEffect(() => {
@@ -281,7 +284,7 @@ export default function VaptApp() {
     fetchLatestFindings();
   }, []);
 
-  // Fetch paginated table records when category, page, or pageSize changes
+  // Fetch paginated table records when category, page, pageSize, or filterMode changes
   useEffect(() => {
     let isMounted = true;
     const fetchPage = async () => {
@@ -296,6 +299,9 @@ export default function VaptApp() {
           page: String(currentPage),
           page_size: String(pageSize),
         });
+        if (filterMode === 'needs_review') {
+          params.append('status', 'needs_review');
+        }
         const res = await fetch(`${API_BASE}/api/v1/agentmesh/vapt/findings/${targetThread}/page?${params.toString()}`);
         if (res.ok) {
           const pageData = await res.json();
@@ -318,7 +324,7 @@ export default function VaptApp() {
     return () => {
       isMounted = false;
     };
-  }, [selectedCategory, currentPage, pageSize, threadId, totalPts]);
+  }, [selectedCategory, currentPage, pageSize, threadId, totalPts, filterMode]);
 
   // Reset Session
   const handleNewSession = () => {
@@ -334,16 +340,16 @@ export default function VaptApp() {
     setCurrentPage(1);
     setSelectedCategory('OS');
     setNonVaptDialogue(null);
-    
+
     // Explicitly wipe storage
     Object.values(STORAGE_KEYS).forEach(k => {
       try {
         localStorage.removeItem(k);
-      } catch (e) {}
+      } catch (e) { }
     });
     try {
       localStorage.setItem(STORAGE_KEYS.THREAD_ID, newId);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   // Client-side heuristics removed: dashboard populates exclusively from server Jev API findings
@@ -357,18 +363,18 @@ export default function VaptApp() {
     try {
       const targetThread = threadId || 'latest';
       const url = `${API_BASE}/api/v1/agentmesh/vapt/findings/${targetThread}/export?format=xlsx`;
-      
+
       const res = await fetch(url);
       if (!res.ok) {
         throw new Error(`Export failed with status ${res.status}`);
       }
-      
+
       const blob = await res.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      const baseName = uploadedFileName 
-        ? uploadedFileName.replace(/\.[^/.]+$/, '') 
+      const baseName = uploadedFileName
+        ? uploadedFileName.replace(/\.[^/.]+$/, '')
         : 'vapt_classified_findings';
       a.download = `${baseName}_classified.xlsx`;
       document.body.appendChild(a);
@@ -393,7 +399,7 @@ export default function VaptApp() {
     setThreadId(currentThreadId);
     try {
       localStorage.setItem(STORAGE_KEYS.THREAD_ID, currentThreadId);
-    } catch (e) {}
+    } catch (e) { }
 
     // Reset dashboard immediately to clean state (no premature client classification)
     setPtsData(DEFAULT_PTS_DATA);
@@ -443,17 +449,16 @@ export default function VaptApp() {
       // 4. Resume form_file_upload with the uploaded artifact
       setUploadStatusText('Validating report authenticity with LLM...');
 
-      // Start live progress and real-time findings streaming
-      let progressPoll = null;
-      let isPollingActive = true;
+      // Native Server-Sent Events (SSE) Stream for real-time progress and live findings
+      let eventSource = null;
       if (currentThreadId) {
-        progressPoll = setInterval(async () => {
-          if (!isPollingActive) return;
-          try {
-            const pRes = await fetch(`${API_BASE}/api/v1/agentmesh/vapt/progress/${currentThreadId}`);
-            if (pRes.ok && isPollingActive) {
-              const pData = await pRes.json();
-              if (pData && pData.total > 0 && isPollingActive) {
+        try {
+          eventSource = new EventSource(`${API_BASE}/api/v1/agentmesh/vapt/progress/${currentThreadId}/stream`);
+          eventSource.onmessage = (e) => {
+            if (!e.data) return;
+            try {
+              const pData = JSON.parse(e.data);
+              if (pData && pData.total > 0) {
                 // Update live progress pill
                 setUploadProgress({
                   completed: pData.completed,
@@ -476,11 +481,27 @@ export default function VaptApp() {
 
                 if (pData.status === 'evaluating') {
                   setUploadStatusText(`Fetching vulnerabilities... (${pData.completed} / ${pData.total})`);
+                } else if (pData.status === 'completed' || pData.status === 'error') {
+                  if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                  }
                 }
               }
+            } catch (err) {
+              console.warn('[VAPT SSE] Error parsing event:', err);
             }
-          } catch (e) {}
-        }, 500);
+          };
+
+          eventSource.onerror = () => {
+            if (eventSource) {
+              eventSource.close();
+              eventSource = null;
+            }
+          };
+        } catch (err) {
+          console.warn('[VAPT SSE] Could not start EventSource:', err);
+        }
       }
 
       const resumeRes = await fetch(`${API_BASE}/api/v1/agentmesh/workflow/${WORKFLOW_ID}/execute`, {
@@ -500,12 +521,11 @@ export default function VaptApp() {
       });
 
       const resumeData = await resumeRes.json();
-      
-      // Stop in-flight polling
-      isPollingActive = false;
-      if (progressPoll) {
-        clearInterval(progressPoll);
-        progressPoll = null;
+
+      // Close in-flight SSE stream
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
       }
 
       setUploadStatusText('Fetching vulnerabilities...');
@@ -606,23 +626,76 @@ Please check your file and upload an authentic vulnerability scan report.`;
         setUploadStatusText('');
         setUploadProgress(null);
 
-        // Clean user-facing messages (filter out lengthy intermediate Excel dumps & raw validator JSON)
+        // Filter helper: ONLY client-facing executive summary & Deep Agent handover message
+        const isClientFacingVaptMessage = (m) => {
+          if (!m) return false;
+          const role = String(m.type || m.role || '').toLowerCase();
+          if (!role.includes('ai') && !role.includes('assistant')) return false;
+
+          const text = typeof m.content === 'string' ? m.content : JSON.stringify(m.content || '');
+          const trimmed = text.trim();
+          if (!trimmed) return false;
+
+          // Basis 1: Discard raw telemetry JSON or progress payloads
+          if (trimmed.startsWith('{') && (trimmed.includes('"type"') || trimmed.includes('"status"') || trimmed.includes('"node_id"'))) {
+            return false;
+          }
+          if (trimmed.startsWith('[') && trimmed.includes('{') && (trimmed.includes('Plugin ID') || trimmed.includes('Sr. No.'))) {
+            return false;
+          }
+
+          // Basis 2: Discard intermediate / muted pipeline nodes
+          const nodeName = String(m.name || m.response_metadata?.active_agent || m.additional_kwargs?.active_agent || '').toLowerCase();
+          if (
+            nodeName.includes('excel') ||
+            nodeName.includes('parser') ||
+            nodeName.includes('validator') ||
+            nodeName.includes('set_data') ||
+            nodeName.includes('guard') ||
+            nodeName.includes('condition')
+          ) {
+            return false;
+          }
+
+          // Basis 3: Semantic Content Filter - Discard raw converter previews and validator banners
+          if (
+            trimmed.includes('Spreadsheet Converted') ||
+            trimmed.includes('Rows Extracted') ||
+            trimmed.includes('VAPT Report Validated') ||
+            trimmed.includes('[Internal Execution') ||
+            trimmed.includes('"is_vapt"') ||
+            trimmed.includes('sample_preview') ||
+            trimmed.includes('Excel converted to JSON successfully') ||
+            trimmed.includes('📊 **Excel converted')
+          ) {
+            return false;
+          }
+
+          // Only retain classifier summary or Deep Agent handover message
+          const isClassifier =
+            nodeName.includes('laya') ||
+            nodeName.includes('jev') ||
+            nodeName.includes('classifier') ||
+            trimmed.includes('Vulnerability Classification') ||
+            trimmed.includes('Findings Assessed') ||
+            trimmed.includes('Category Distribution');
+
+          const isDeepAgent =
+            nodeName.includes('deep_agent') ||
+            nodeName.includes('agent') ||
+            trimmed.includes('Remediation') ||
+            trimmed.includes('Analyst') ||
+            trimmed.includes('Security') ||
+            trimmed.includes('vulnerability');
+
+          return isClassifier || isDeepAgent;
+        };
+
         const cleanMsgs = [];
         if (resumeData.messages && Array.isArray(resumeData.messages)) {
           resumeData.messages.forEach((m, i) => {
-            const typeStr = String(m.type || m.role || '').toLowerCase();
-            if (typeStr.includes('ai') || typeStr.includes('assistant')) {
+            if (isClientFacingVaptMessage(m)) {
               const text = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
-              // Filter out noisy intermediate debug messages
-              if (text.includes('Excel converted to JSON successfully') || text.includes('📊 **Excel converted')) {
-                return;
-              }
-              if (text.includes('"is_vapt"')) {
-                return;
-              }
-              if (text.includes('[Internal Execution Content]') || text.includes('[Internal Execution Completed]')) {
-                return;
-              }
               cleanMsgs.push({
                 id: `init-${Date.now()}-${i}`,
                 role: 'agent',
@@ -637,12 +710,7 @@ Please check your file and upload an authentic vulnerability scan report.`;
           cleanMsgs.push({
             id: `init-${Date.now()}`,
             role: 'agent',
-            content: `✅ **VAPT Report Validated Successfully**
-
-• **File:** \`${file.name}\`
-• **Findings Loaded:** ${findingsData?.total_findings || 'All'} records classified by TypeSafe Jev Engine into categories.
-
-Which vulnerability category (OS, Network, Database, Application) would you like to focus on for remediation?`,
+            content: `✅ **Vulnerability Classification Completed**\n\n• **Findings Assessed:** \`${findingsData?.total_findings || 'All'}\` records classified.\n• **Status:** Classification finished. Orchestrating remediation agent...`,
             timestamp: new Date().toLocaleTimeString()
           });
         }
@@ -665,33 +733,37 @@ Which vulnerability category (OS, Network, Database, Application) would you like
               }
             })
           })
-          .then(res => res.json())
-          .then(agentData => {
-            console.log('[VAPT] Background Deep Agent finished:', agentData);
-            if (agentData && agentData.messages && Array.isArray(agentData.messages)) {
-              const agentMsgs = [];
-              agentData.messages.forEach((m, idx) => {
-                const typeStr = String(m.type || m.role || '').toLowerCase();
-                if (typeStr.includes('ai') || typeStr.includes('assistant')) {
-                  const text = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
-                  if (text && text.trim() && !text.includes('[Internal Execution')) {
-                    agentMsgs.push({
-                      id: `deep-agent-${Date.now()}-${idx}`,
-                      role: 'agent',
-                      content: text,
-                      timestamp: new Date().toLocaleTimeString()
-                    });
+            .then(res => res.json())
+            .then(agentData => {
+              console.log('[VAPT] Background Deep Agent finished:', agentData);
+              if (agentData && agentData.messages && Array.isArray(agentData.messages)) {
+                // Extract all clean client messages from complete thread execution history
+                const clientMsgs = [];
+                const seenContents = new Set();
+                agentData.messages.forEach((m, idx) => {
+                  if (isClientFacingVaptMessage(m)) {
+                    const text = (typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).trim();
+                    // Deduplicate identical content bubbles if repeated in LangGraph state
+                    if (!seenContents.has(text)) {
+                      seenContents.add(text);
+                      clientMsgs.push({
+                        id: `deep-agent-${Date.now()}-${idx}`,
+                        role: 'agent',
+                        content: text,
+                        timestamp: new Date().toLocaleTimeString()
+                      });
+                    }
                   }
+                });
+
+                if (clientMsgs.length > 0) {
+                  setMessages(clientMsgs);
                 }
-              });
-              if (agentMsgs.length > 0) {
-                setMessages(prev => [...prev, ...agentMsgs]);
               }
-            }
-          })
-          .catch(agentErr => {
-            console.warn('[VAPT] Deep Agent background resume error:', agentErr);
-          });
+            })
+            .catch(agentErr => {
+              console.warn('[VAPT] Deep Agent background resume error:', agentErr);
+            });
         }
       }
 
@@ -708,8 +780,10 @@ Which vulnerability category (OS, Network, Database, Application) would you like
       ]);
       setIsChatOpen(true);
     } finally {
-      isPollingActive = false;
-      if (progressPoll) clearInterval(progressPoll);
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
       setIsUploading(false);
       setUploadStatusText('');
       setUploadProgress(null);
@@ -777,7 +851,7 @@ Which vulnerability category (OS, Network, Database, Application) would you like
             // 1. Live token stream from LLM
             if (event.type === 'token' && event.content) {
               accumulatedContent += event.content;
-              setMessages(prev => prev.map(m => 
+              setMessages(prev => prev.map(m =>
                 m.id === agentMsgId ? { ...m, content: accumulatedContent, isStreaming: true } : m
               ));
             }
@@ -786,10 +860,10 @@ Which vulnerability category (OS, Network, Database, Application) would you like
               const toolLabel = event.tool === 'analyze_vapt_csv'
                 ? 'Analyzing VAPT Scan Findings...'
                 : event.tool === 'query_vapt_report'
-                ? 'Querying Report Details...'
-                : event.tool === 'execute_ssh_mitigation'
-                ? 'Executing SSH Mitigation Commands...'
-                : `Executing ${event.tool}...`;
+                  ? 'Querying Report Details...'
+                  : event.tool === 'execute_ssh_mitigation'
+                    ? 'Executing SSH Mitigation Commands...'
+                    : `Executing ${event.tool}...`;
               setActiveToolName(toolLabel);
             }
             // 3. Tool completed
@@ -799,14 +873,14 @@ Which vulnerability category (OS, Network, Database, Application) would you like
             // 4. Final state snapshot
             else if (event.type === 'final') {
               const finalOutput = event.content || event.output || accumulatedContent;
-              setMessages(prev => prev.map(m => 
+              setMessages(prev => prev.map(m =>
                 m.id === agentMsgId ? { ...m, content: finalOutput, isStreaming: false } : m
               ));
             }
             // 5. Error event
             else if (event.type === 'error') {
               accumulatedContent += `\n\n⚠️ *System Error: ${event.message || 'Operation failed'}*`;
-              setMessages(prev => prev.map(m => 
+              setMessages(prev => prev.map(m =>
                 m.id === agentMsgId ? { ...m, content: accumulatedContent, isStreaming: false } : m
               ));
             }
@@ -817,17 +891,17 @@ Which vulnerability category (OS, Network, Database, Application) would you like
       }
 
       // Mark streaming done
-      setMessages(prev => prev.map(m => 
+      setMessages(prev => prev.map(m =>
         m.id === agentMsgId ? { ...m, isStreaming: false } : m
       ));
 
     } catch (err) {
       console.error('Streaming error:', err);
-      setMessages(prev => prev.map(m => 
-        m.id === agentMsgId ? { 
-          ...m, 
-          content: `⚠️ **Error communicating with Deep Agent**: ${err.message}`, 
-          isStreaming: false 
+      setMessages(prev => prev.map(m =>
+        m.id === agentMsgId ? {
+          ...m,
+          content: `⚠️ **Error communicating with Deep Agent**: ${err.message}`,
+          isStreaming: false
         } : m
       ));
     } finally {
@@ -845,19 +919,27 @@ Which vulnerability category (OS, Network, Database, Application) would you like
     Info: vulnerabilities[selectedCategory]?.filter(v => v.severity === 'Info').length || 0,
   };
 
-  const totalInCurrentCategory = categoryStats[selectedCategory]?.total !== undefined 
-    ? categoryStats[selectedCategory].total 
+  const totalInCurrentCategory = categoryStats[selectedCategory]?.total !== undefined
+    ? categoryStats[selectedCategory].total
     : (totalCategoryRecords || vulnerabilities[selectedCategory]?.length || 0);
 
-  const effectiveTotalPages = totalPages > 1 
-    ? totalPages 
+  const currentCategoryReviewCount = categoryStats[selectedCategory]?.needs_review !== undefined
+    ? categoryStats[selectedCategory].needs_review
+    : (vulnerabilities[selectedCategory]?.filter(v => v.jev_status === 'needs_review' || (typeof v.confidence === 'number' && v.confidence < 0.60)).length || 0);
+
+  const effectiveTotalPages = totalPages > 1
+    ? totalPages
     : Math.max(1, Math.ceil(totalInCurrentCategory / pageSize));
 
-  const displayedRows = pageRecords.length > 0 
-    ? pageRecords 
-    : (vulnerabilities[selectedCategory]?.slice((currentPage - 1) * pageSize, currentPage * pageSize) 
-       || vulnerabilities[selectedCategory]?.slice(0, pageSize) 
-       || []);
+  const rawDisplayedRows = pageRecords.length > 0
+    ? pageRecords
+    : (vulnerabilities[selectedCategory]?.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+      || vulnerabilities[selectedCategory]?.slice(0, pageSize)
+      || []);
+
+  const displayedRows = filterMode === 'needs_review'
+    ? rawDisplayedRows.filter(v => v.jev_status === 'needs_review' || (typeof v.confidence === 'number' && v.confidence < 0.60))
+    : rawDisplayedRows;
 
   return (
     <div className="vapt-app-container">
@@ -940,7 +1022,7 @@ Which vulnerability category (OS, Network, Database, Application) would you like
           </button>
 
           <button
-            className="vapt-btn vapt-btn-secondary" 
+            className="vapt-btn vapt-btn-secondary"
             onClick={handleNewSession}
             disabled={isUploading || isStreaming}
             title="Start New Session"
@@ -979,7 +1061,7 @@ Which vulnerability category (OS, Network, Database, Application) would you like
                     <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                   ))}
                 </Pie>
-                <RechartsTooltip 
+                <RechartsTooltip
                   formatter={(value) => `${totalPts > 0 ? ((value / totalPts) * 100).toFixed(1) : 0}% (${value})`}
                   itemStyle={{ color: '#401526', fontWeight: 600 }}
                 />
@@ -1035,8 +1117,8 @@ Which vulnerability category (OS, Network, Database, Application) would you like
         <div className="vapt-panel">
           <div className="vapt-tabs">
             {Object.keys(vulnerabilities).map(cat => {
-              const count = categoryStats[cat]?.total !== undefined 
-                ? categoryStats[cat].total 
+              const count = categoryStats[cat]?.total !== undefined
+                ? categoryStats[cat].total
                 : (vulnerabilities[cat]?.length || 0);
               return (
                 <button
@@ -1044,6 +1126,7 @@ Which vulnerability category (OS, Network, Database, Application) would you like
                   className={`vapt-tab-btn ${selectedCategory === cat ? 'active' : ''}`}
                   onClick={() => {
                     setSelectedCategory(cat);
+                    setFilterMode('all');
                     setCurrentPage(1);
                   }}
                 >
@@ -1053,7 +1136,7 @@ Which vulnerability category (OS, Network, Database, Application) would you like
             })}
           </div>
 
-          {/* Selected Category KPI Strip */}
+          {/* Selected Category KPI Strip & Review Filter */}
           <div className="vapt-kpi-strip">
             <div>
               <div className="vapt-kpi-label">Total In Category</div>
@@ -1065,7 +1148,31 @@ Which vulnerability category (OS, Network, Database, Application) would you like
               <span className="vapt-pill vapt-pill-medium">MEDIUM: {(selectedCategoryStats.Medium || 0).toLocaleString()}</span>
               <span className="vapt-pill vapt-pill-low">LOW: {(selectedCategoryStats.Low || 0).toLocaleString()}</span>
               <span className="vapt-pill vapt-pill-info">INFO: {(selectedCategoryStats.Info || 0).toLocaleString()}</span>
+              {currentCategoryReviewCount > 0 && (
+                <span className="vapt-pill vapt-pill-review-kpi" title="Findings with AI confidence < 60% or narrow margin flagged for analyst verification">
+                  ⚠️ NEEDS REVIEW: {currentCategoryReviewCount.toLocaleString()}
+                </span>
+              )}
             </div>
+
+            {/* Filter Toggle: All vs Needs Review */}
+            {currentCategoryReviewCount > 0 && (
+              <div className="vapt-filter-group">
+                <button
+                  className={`vapt-filter-btn ${filterMode === 'all' ? 'active' : ''}`}
+                  onClick={() => { setFilterMode('all'); setCurrentPage(1); }}
+                >
+                  All ({(selectedCategoryStats.total || 0).toLocaleString()})
+                </button>
+                <button
+                  className={`vapt-filter-btn ${filterMode === 'needs_review' ? 'active-review' : ''}`}
+                  onClick={() => { setFilterMode('needs_review'); setCurrentPage(1); }}
+                  title="Show only findings flagged for analyst review"
+                >
+                  ⚠️ Needs Review ({currentCategoryReviewCount.toLocaleString()})
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Table */}
@@ -1080,27 +1187,54 @@ Which vulnerability category (OS, Network, Database, Application) would you like
                 </tr>
               </thead>
               <tbody>
-                {displayedRows.map((v) => (
-                  <tr key={v.id}>
-                    <td style={{ fontWeight: 500, color: 'var(--text-secondary, #475569)' }}>{v.name}</td>
-                    <td>
-                      <span className={`vapt-pill vapt-pill-${(v.severity || 'info').toLowerCase()}`}>
-                        {v.severity}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ color: 'var(--text-primary, #0f172a)' }}>{v.host}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>
-                        {v.status || 'Pending'}
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6366f1' }}>
-                        {typeof v.confidence === 'number' ? `${Math.round(v.confidence * 100)}%` : '--'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {displayedRows.map((v) => {
+                  const confNum = typeof v.confidence === 'number' ? Math.round(v.confidence * 100) : null;
+                  const isNeedsReview = v.jev_status === 'needs_review' || (confNum !== null && confNum < 60);
+
+                  return (
+                    <tr key={v.id} className={isNeedsReview ? 'vapt-row-review' : ''}>
+                      <td style={{ fontWeight: 500, color: 'var(--text-secondary, #475569)' }}>
+                        <span>{v.name}</span>
+                      </td>
+                      <td>
+                        <span className={`vapt-pill vapt-pill-${(v.severity || 'info').toLowerCase()}`}>
+                          {v.severity}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ color: 'var(--text-primary, #0f172a)' }}>{v.host}</div>
+                        <div style={{ fontSize: '0.75rem', color: isNeedsReview ? '#d97706' : '#10b981', fontWeight: 600 }}>
+                          {isNeedsReview ? 'Review Required' : (v.status || 'Pending')}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                          <span
+                            style={{
+                              fontSize: '0.85rem',
+                              fontWeight: 700,
+                              color: isNeedsReview ? '#d97706' : '#6366f1'
+                            }}
+                          >
+                            {confNum !== null ? `${confNum}%` : '--'}
+                          </span>
+                          {isNeedsReview ? (
+                            <span
+                              style={{ fontSize: '0.7rem', color: '#b45309', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                              title={v.jev_review_reason || (confNum !== null ? `Confidence ${confNum}% < 60%` : "Needs Review")}
+                            >
+                              ⚠️ Needs Review
+                            </span>
+                          ) : confNum !== null ? (
+                            <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 600 }}>
+                              ✓ Verified
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {displayedRows.length === 0 && (
                   <tr>
                     <td colSpan={4} style={{ padding: '2.5rem', textAlign: 'center', color: '#64748b' }}>
@@ -1226,7 +1360,7 @@ Which vulnerability category (OS, Network, Database, Application) would you like
         </div>
       </div>
 
-            {/* Non-VAPT Report Dialogue Modal */}
+      {/* Non-VAPT Report Dialogue Modal */}
       {nonVaptDialogue && (
         <div className="vapt-dialog-backdrop" onClick={() => setNonVaptDialogue(null)}>
           <div className="vapt-dialog-card" onClick={(e) => e.stopPropagation()}>
@@ -1240,8 +1374,8 @@ Which vulnerability category (OS, Network, Database, Application) would you like
                   <div className="vapt-dialog-sub">Security verification gate rejected this document</div>
                 </div>
               </div>
-              <button 
-                onClick={() => setNonVaptDialogue(null)} 
+              <button
+                onClick={() => setNonVaptDialogue(null)}
                 className="vapt-dialog-close-btn"
                 title="Dismiss"
               >
@@ -1264,8 +1398,8 @@ Which vulnerability category (OS, Network, Database, Application) would you like
             </div>
 
             <div className="vapt-dialog-footer">
-              <button 
-                className="vapt-btn vapt-btn-primary" 
+              <button
+                className="vapt-btn vapt-btn-primary"
                 onClick={() => {
                   setNonVaptDialogue(null);
                   fileInputRef.current?.click();
@@ -1274,8 +1408,8 @@ Which vulnerability category (OS, Network, Database, Application) would you like
                 <Upload size={16} />
                 <span>Upload Authentic Scan</span>
               </button>
-              <button 
-                className="vapt-btn vapt-btn-secondary" 
+              <button
+                className="vapt-btn vapt-btn-secondary"
                 onClick={() => setNonVaptDialogue(null)}
               >
                 Dismiss
@@ -1286,8 +1420,8 @@ Which vulnerability category (OS, Network, Database, Application) would you like
       )}
 
       {/* Floating Chat Trigger Button */}
-      <div 
-        className="chatbot-trigger" 
+      <div
+        className="chatbot-trigger"
         onClick={() => setIsChatOpen(!isChatOpen)}
         title="Open VAPT Assistant"
       >
@@ -1372,22 +1506,22 @@ Which vulnerability category (OS, Network, Database, Application) would you like
 
           {/* Subtle Suggestion Chips */}
           <div className="chat-suggestions">
-            <button 
-              className="chat-chip" 
+            <button
+              className="chat-chip"
               onClick={() => handleSendMessage('I want to remediate OS critical ones')}
               disabled={isStreaming}
             >
               Remediate OS Critical ones
             </button>
-            <button 
-              className="chat-chip" 
+            <button
+              className="chat-chip"
               onClick={() => handleSendMessage('High Severity Findings')}
               disabled={isStreaming}
             >
               High Severity Findings
             </button>
-            <button 
-              className="chat-chip" 
+            <button
+              className="chat-chip"
               onClick={() => handleSendMessage('Summarize Vulnerabilities')}
               disabled={isStreaming}
             >

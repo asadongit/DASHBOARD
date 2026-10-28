@@ -19,7 +19,9 @@ import {
 } from 'lucide-react';
 import './AutomationApp.css';
 
-const API_BASE = 'http://localhost:8000/api/v1/agentmesh';
+const rawAgentMeshUrl = import.meta.env.VITE_AGENTMESH_URL || 'http://localhost:8000';
+const baseHost = rawAgentMeshUrl.replace(/\/+$/, '').replace(/\/api\/v1\/agentmesh\/?$/, '');
+const API_BASE = `${baseHost}/api/v1/agentmesh`;
 
 export default function AutomationApp() {
   const [user, setUser] = useState({ username: 'admin', role: 'admin' });

@@ -948,3 +948,92 @@
   border-radius: 3px;
   transition: width 0.3s ease-in-out;
 }
+
+/* ── Probability-Based Decision Gating & Review Badges ── */
+.vapt-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.vapt-pill-tag-review {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.vapt-pill-tag-verified {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.vapt-pill-tag-insufficient {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.vapt-pill-review-kpi {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  font-weight: 700;
+}
+
+.vapt-row-review {
+  background: rgba(254, 243, 199, 0.25);
+}
+
+.vapt-row-review:hover td {
+  background: rgba(254, 243, 199, 0.45) !important;
+}
+
+/* Review Filter Toggle Buttons */
+.vapt-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.vapt-filter-btn {
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.vapt-filter-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.vapt-filter-btn.active {
+  background: #401526;
+  color: #ffffff;
+  border-color: #401526;
+}
+
+.vapt-filter-btn.active-review {
+  background: #d97706;
+  color: #ffffff;
+  border-color: #d97706;
+}
+
