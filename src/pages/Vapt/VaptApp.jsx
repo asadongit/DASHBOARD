@@ -10,7 +10,7 @@ import rehypeRaw from 'rehype-raw';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import './VaptApp.css';
 
-const WORKFLOW_ID = 'd6213eea-c590-4391-bc05-2eef9eb71ea3';
+const WORKFLOW_ID = 'c7f3b8a1-4e92-4f15-8d26-9a5c8e3f1b0a';
 const rawAgentMeshUrl = import.meta.env.VITE_AGENTMESH_URL || 'http://localhost:8000';
 const API_BASE = rawAgentMeshUrl.replace(/\/+$/, '').replace(/\/api\/v1\/agentmesh\/?$/, '');
 
@@ -817,7 +817,12 @@ Please check your file and upload an authentic vulnerability scan report.`;
         body: JSON.stringify({
           mode: 'stream',
           thread_id: threadId,
-          input: text
+          input: text,
+          target_node_id: 'deep_agent_wfl18',
+          context: {
+            source: 'chat',
+            target_node_id: 'deep_agent_wfl18'
+          }
         })
       });
 
@@ -1526,6 +1531,20 @@ Please check your file and upload an authentic vulnerability scan report.`;
               disabled={isStreaming}
             >
               Summarize Vulnerabilities
+            </button>
+            <button
+              className="chat-chip"
+              onClick={() => handleSendMessage('Proceed with mitigation and create ServiceNow ticket')}
+              disabled={isStreaming}
+            >
+              🎫 Proceed with Mitigation
+            </button>
+            <button
+              className="chat-chip"
+              onClick={() => handleSendMessage('Check ServiceNow ticket approval status')}
+              disabled={isStreaming}
+            >
+              🎫 Check Ticket Approval
             </button>
           </div>
 
